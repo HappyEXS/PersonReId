@@ -122,20 +122,16 @@ def build_transforms(is_train=True, height=256, width=128):
     Standardowe transformacje dla ReID.
     Wymiary 256x128 są standardem w benchmarkach ReID[cite: 634].
     """
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-    )
+    # normalize = transforms.Normalize(
+    #     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    # )
 
     if is_train:
         transform = transforms.Compose(
             [
                 transforms.Resize((height, width)),
-                transforms.RandomHorizontalFlip(),
-                transforms.Pad(10),
-                transforms.RandomCrop((height, width)),
                 transforms.ToTensor(),
-                normalize,
-                # Tutaj można dodać RandomErasing
+                # normalize,
             ]
         )
     else:
@@ -143,7 +139,7 @@ def build_transforms(is_train=True, height=256, width=128):
             [
                 transforms.Resize((height, width)),
                 transforms.ToTensor(),
-                normalize,
+                # normalize,
             ]
         )
 
