@@ -8,16 +8,24 @@ from torchvision import transforms
 
 from face_detector import FaceDetector
 
+mapping = {
+    "train": "train_faces",
+    "gallery": "gallery_faces",
+    "query": "query_faces"
+}
 
-class VCClothesDataset(Dataset):
-    def __init__(self, root_dir, mode="train", transform=None, verbose=True):
 
-        self.detector = FaceDetector(device="cpu", confidence_threshold=0.5)
+class VCClothesDatasetFaces(Dataset):
+    def __init__(self, root_dir, mode="train", transform=None, verbose=True, save_faces=False):
+
         self.root_dir = root_dir
         self.mode = mode
         self.transform_img = (
-            build_transforms(normalize=True) if transform is None else transform
+            build_transforms(if_normalize=True) if transform is None else transform
         )
+        self.transform_face = build_transforms(if_normalize=True, for_faces=True)
+        
+        self.save_faces = save_faces
 
         if mode == "train":
             self.data_dir = root_dir + "/train"
@@ -87,29 +95,37 @@ class VCClothesDataset(Dataset):
 
         img = Image.open(path).convert("RGB")
 
-        face = self.detector.get_face_tensor(img)
-
         if self.transform_img is not None:
             img = self.transform_img(img)
-
-        if isinstance(face, torch.Tensor):
-            face = face.float()
-        else:
-            face = torch.zeros((3, 50, 50), dtype=torch.float)
 
         pid = torch.tensor(pid, dtype=torch.long)
         camid = torch.tensor(camid, dtype=torch.long)
         clothes_id = torch.tensor(clothes_id, dtype=torch.long)
 
-        return img, pid, camid, clothes_id, face
+        if self.save_faces:
+            face = torch.zeros((3, 50, 50), dtype=torch.float)
+            return img, pid, camid, clothes_id, face, path
+        else:
+            face_path = path
+            for old, new in mapping.items():
+                face_path = face_path.replace(old, new)
+            face = Image.open(face_path).convert("RGB")
+            face = self.transform_face(face)
+            return img, pid, camid, clothes_id, face
 
 
-def build_transforms(normalize=False, height=256, width=128):
+def build_transforms(if_normalize=False, for_faces=False):
+    height=256
+    width=128
+    if for_faces: 
+        height=50
+        width=50
+
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
 
-    if normalize:
+    if if_normalize:
         transform = transforms.Compose(
             [
                 transforms.Resize((height, width)),

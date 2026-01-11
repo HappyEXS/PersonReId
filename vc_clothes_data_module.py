@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import torch
 
-from vc_clothes_dataset import VCClothesDataset, build_transforms
+from vc_clothes_dataset_w_faces import VCClothesDatasetFaces, build_transforms
 
 
 class VCClothesDataModule(pl.LightningDataModule):
@@ -15,7 +15,7 @@ class VCClothesDataModule(pl.LightningDataModule):
         self.val_split = val_split
 
     def setup(self, stage=None):
-        gallery_dataset = VCClothesDataset(
+        gallery_dataset = VCClothesDatasetFaces(
             root_dir=self.root_dir, mode="gallery", transform=None
         )
 
@@ -27,7 +27,7 @@ class VCClothesDataModule(pl.LightningDataModule):
             gallery_dataset, [train_size, val_size]
         )
 
-        self.test_ds = VCClothesDataset(
+        self.test_ds = VCClothesDatasetFaces(
             root_dir=self.root_dir, mode="query", transform=None
         )
 
@@ -37,6 +37,7 @@ class VCClothesDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
+            persistent_workers=True
         )
 
     def val_dataloader(self):
@@ -45,6 +46,7 @@ class VCClothesDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
+            persistent_workers=True
         )
 
     def test_dataloader(self):
