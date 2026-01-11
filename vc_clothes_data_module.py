@@ -15,20 +15,24 @@ class VCClothesDataModule(pl.LightningDataModule):
         self.val_split = val_split
 
     def setup(self, stage=None):
-        gallery_dataset = VCClothesDatasetFaces(
-            root_dir=self.root_dir, mode="gallery", transform=None
+        train_dataset = VCClothesDatasetFaces(
+            root_dir=self.root_dir, mode="train", transform=None
         )
 
-        total_size = len(gallery_dataset)
+        total_size = len(train_dataset)
         val_size = int(total_size * self.val_split)
         train_size = total_size - val_size
 
         self.train_ds, self.val_ds = torch.utils.data.random_split(
-            gallery_dataset, [train_size, val_size]
+            train_dataset, [train_size, val_size]
         )
 
-        self.test_ds = VCClothesDatasetFaces(
+        self.query_ds = VCClothesDatasetFaces(
             root_dir=self.root_dir, mode="query", transform=None
+        )
+
+        self.gallery_ds = VCClothesDatasetFaces(
+            root_dir=self.root_dir, mode="gallery", transform=None
         )
 
     def train_dataloader(self):
@@ -37,7 +41,7 @@ class VCClothesDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
-            persistent_workers=True
+            persistent_workers=True,
         )
 
     def val_dataloader(self):
@@ -46,13 +50,21 @@ class VCClothesDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            persistent_workers=True
+            persistent_workers=True,
         )
 
     def test_dataloader(self):
-        return DataLoader(
-            self.test_ds,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )
+        return [
+            DataLoader(
+                self.query_ds,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+            ),
+            DataLoader(
+                self.gallery_ds,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+            ),
+        ]
