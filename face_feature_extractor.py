@@ -4,7 +4,7 @@ from torchvision import models
 
 
 class FaceFeatureExtractor(nn.Module):
-    def __init__(self, num_classes=256, embedding_dim=512):
+    def __init__(self, embedding_dim=512):
         super(FaceFeatureExtractor, self).__init__()
 
         self.backbone = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
@@ -20,8 +20,6 @@ class FaceFeatureExtractor(nn.Module):
             nn.ReLU(),
         )
 
-        self.classifier = nn.Linear(embedding_dim, num_classes)
-
     def forward(self, x):
         self.backbone.eval()
 
@@ -31,4 +29,4 @@ class FaceFeatureExtractor(nn.Module):
 
         embedding_norm = torch.nn.functional.normalize(embedding, p=2, dim=1)
 
-        return self.classifier(embedding_norm)
+        return embedding_norm

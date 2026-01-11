@@ -61,7 +61,7 @@ class InceptionModule(nn.Module):
 
 
 class AppearanceBranch(nn.Module):
-    def __init__(self, num_classes=256, embedding_dim=512):
+    def __init__(self, embedding_dim=512):
         """
         Appearance Branch z architekturą Inception.
         Dostosowana do VC-Clothes (256 klas, embedding 512).
@@ -103,9 +103,6 @@ class AppearanceBranch(nn.Module):
             nn.BatchNorm1d(embedding_dim),
             nn.ReLU(),  # Opcjonalnie, w zależności od tego, czy embedding ma być przed czy po aktywacji
         )
-
-        # --- Klasyfikator ---
-        self.classifier = nn.Linear(embedding_dim, num_classes, bias=False)
 
         # Inicjalizacja wag
         self._init_weights()
