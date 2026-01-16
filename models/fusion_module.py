@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from torch.optim import Adam
 import numpy as np
 
-from fusion import Fusion
+from models.fusion import Fusion
 
 
 class FusionModule(pl.LightningModule):
@@ -33,12 +33,12 @@ class FusionModule(pl.LightningModule):
         # img, pid, camid, clothes_id, face
         body_img, pids, _, _, face_img = batch
 
-        # Forward pass przez model fuzyjny
-        logits = self.model(body_img, face_img)
+        embedding = self.model(body_img, face_img)
 
+        # Dla treningu embedingi przepuszczamy przez warstę klasyfikującą
+        logits = self.model.classifier(embedding)
         loss = self.criterion(logits, pids)
 
-        # Logowanie
         preds = torch.argmax(logits, dim=1)
         acc = (preds == pids).float().mean()
 
@@ -50,14 +50,12 @@ class FusionModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         body_img, pids, _, _, face_img = batch
 
-        # W walidacji model.training = False, więc forward zwróci embeddingi.
-        # Aby policzyć loss/acc musimy wymusić zwrot logitów lub zmienić logikę w forward.
-        # Najprościej: wywołajmy classifier ręcznie w walidacji.
-
         embedding = self.model(body_img, face_img)
-        logits = self.model.classifier(embedding)
 
+        # Dla walidacji (również dane z train) embedingi przepuszczamy przez warstę klasyfikującą
+        logits = self.model.classifier(embedding)
         loss = self.criterion(logits, pids)
+
         preds = torch.argmax(logits, dim=1)
         acc = (preds == pids).float().mean()
 
@@ -112,10 +110,6 @@ class FusionModule(pl.LightningModule):
         self.log("test_Rank5", r5)
         self.log("test_Rank10", r10)
 
-        print(
-            f"\n--- Wyniki Testowe ---\nmAP: {mAP:.2%}\nRank-1: {r1:.2%}\nRank-5: {r5:.2%}\nRank-10: {r10:.2%}\n---------------------"
-        )
-
         # Czyścimy pamięć po epoce
         self.test_outputs.clear()
 
@@ -123,7 +117,7 @@ class FusionModule(pl.LightningModule):
         self, distmat, q_pids, g_pids, q_camids, g_camids, max_rank=10
     ):
         """
-        Oblicza Mean Average Precision (mAP) oraz Rank-N (CMC).
+        Oblicza Mean Average Precision (mAP) oraz Rank-N.
 
         Args:
             distmat: macierz odległości numpy [num_query x num_gallery]
@@ -140,15 +134,14 @@ class FusionModule(pl.LightningModule):
 
         all_cmc = []
         all_ap = []
-        num_valid_q = 0  # Liczba zapytań z poprawnym odpowiednikiem w galerii
 
         for q_idx in range(num_q):
             # Pobieramy dane dla konkretnego zapytania
             q_pid = q_pids[q_idx]
             q_cam = q_camids[q_idx]
 
-            # --- FILTROWANIE (Standard ReID Protocol) ---
-            # Usuwamy hity z tej samej kamery dla tej samej osoby (junk)
+            # --- FILTROWANIE ---
+            # Usuwamy hity z tej samej kamery dla tej samej osoby
             order = indices[q_idx]
             remove = (g_pids[order] == q_pid) & (g_camids[order] == q_cam)
             keep = ~remove
@@ -159,8 +152,6 @@ class FusionModule(pl.LightningModule):
             if not np.any(raw_cmc):
                 # Jeśli po odfiltrowaniu tej samej kamery nie ma już tej osoby w galerii - pomijamy
                 continue
-
-            num_valid_q += 1
 
             # --- Obliczanie AP (Average Precision) ---
             # Liczymy skumulowaną sumę trafień: [0, 1, 1, 2, ...]
@@ -176,21 +167,18 @@ class FusionModule(pl.LightningModule):
             cmc = cmc_sum.clip(max=1)
             all_cmc.append(cmc[:max_rank])
 
-        if num_valid_q == 0:
-            return 0.0, 0.0, 0.0, 0.0
-
-        # Uśrednianie wyników po wszystkich poprawnych zapytaniach
         mAP = np.mean(all_ap)
-        cmc_results = np.mean(all_cmc, axis=0)  # [Rank-1, Rank-2, ..., Rank-10]
+        rankn_results = np.mean(all_cmc, axis=0)
 
-        return mAP, cmc_results[0], cmc_results[4], cmc_results[9]
+        return (
+            mAP,
+            rankn_results[0],  # Rank-1
+            rankn_results[4],  # Rank-5
+            rankn_results[9],  # Rank-10
+        )
 
     def configure_optimizers(self):
-        # Optymalizujemy parametry obu sieci (chyba że są zamrożone) oraz nowego klasyfikatora
-        # return Adam(self.model.parameters(), lr=self.lr)
-
-        optimizer = Adam(
+        return Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=self.lr,
         )
-        return optimizer

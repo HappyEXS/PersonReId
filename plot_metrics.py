@@ -62,3 +62,18 @@ def plot_metrics(csv_path="metrics.csv"):
         ax2.grid(True)
 
     plt.tight_layout()
+
+
+def get_test_metricies(csv_path="metrics.csv"):
+    if not Path(csv_path).exists():
+        print(f"Błąd: Plik {csv_path} nie istnieje.")
+        return
+
+    df = pd.read_csv(csv_path)
+
+    test_results = df.dropna(subset=["test_Rank1"])
+
+    cols_of_interest = ["test_mAP", "test_Rank1", "test_Rank5", "test_Rank10"]
+    test_metricies = test_results[cols_of_interest]
+
+    return test_metricies

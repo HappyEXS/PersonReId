@@ -6,17 +6,24 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-from face_detector import FaceDetector
-
-mapping = {
-    "train": "train_faces",
-    "gallery": "gallery_faces",
-    "query": "query_faces"
-}
+mapping = {"train": "train_faces", "gallery": "gallery_faces", "query": "query_faces"}
 
 
 class VCClothesDatasetFaces(Dataset):
-    def __init__(self, root_dir, mode="train", transform=None, verbose=True, save_faces=False):
+    """
+    Dataset dla treningu i testowania.
+
+    Args:
+        root_dir (string)       : Ścieżka do folderu z danymi.
+        mode (string)           : Rozmiar batcha.
+        transform (int)         : Liczba procesów do obsługi datasetu.
+        verbose (boolean)       : Stosunek podziału zbioru testowego na walidacyjny.
+        save_faces (boolean)    : Stosunek podziału zbioru testowego na walidacyjny.
+    """
+
+    def __init__(
+        self, root_dir, mode="train", transform=None, verbose=True, save_faces=False
+    ):
 
         self.root_dir = root_dir
         self.mode = mode
@@ -24,7 +31,7 @@ class VCClothesDatasetFaces(Dataset):
             build_transforms(if_normalize=True) if transform is None else transform
         )
         self.transform_face = build_transforms(if_normalize=True, for_faces=True)
-        
+
         self.save_faces = save_faces
 
         if mode == "train":
@@ -88,6 +95,15 @@ class VCClothesDatasetFaces(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, index):
+        """
+        Zwraca wektor danych
+            img             : tensor obrazu o wymiarach 256x128
+            pid             : id osoby
+            camid           : id kamery
+            clothes_id      : id ubrania
+            face            : tensor twarzy o wymiarach 50x50
+            path            : ścieżka zapisanego pliku (w trybie save_faces=True)
+        """
         path = self.img_paths[index]
         pid = self.pids[index]
         camid = self.camids[index]
@@ -103,6 +119,7 @@ class VCClothesDatasetFaces(Dataset):
         clothes_id = torch.tensor(clothes_id, dtype=torch.long)
 
         if self.save_faces:
+            # W trybie zapisywania twarzy (zakładamy że jeszcze nie ma zapisanych twarzy)
             face = torch.zeros((3, 50, 50), dtype=torch.float)
             return img, pid, camid, clothes_id, face, path
         else:
@@ -115,11 +132,11 @@ class VCClothesDatasetFaces(Dataset):
 
 
 def build_transforms(if_normalize=False, for_faces=False):
-    height=256
-    width=128
-    if for_faces: 
-        height=50
-        width=50
+    height = 256
+    width = 128
+    if for_faces:
+        height = 50
+        width = 50
 
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]

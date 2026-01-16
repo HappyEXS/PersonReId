@@ -1,13 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import scipy
 
 
 class BasicConv2d(nn.Module):
     """
     Podstawowy blok: Konwolucja + BatchNorm + ReLU.
-    Używany wielokrotnie w modułach Inception.
     """
 
     def __init__(self, in_channels, out_channels, **kwargs):
@@ -56,16 +54,16 @@ class InceptionModule(nn.Module):
 
     def forward(self, x):
         outputs = [self.branch1(x), self.branch2(x), self.branch3(x), self.branch4(x)]
-        # Konkatenacja wyników wszystkich gałęzi wzdłuż wymiaru kanałów
         return torch.cat(outputs, 1)
 
 
 class AppearanceBranch(nn.Module):
+    """
+    Appearance Branch z architekturą Inception.
+    """
+
     def __init__(self, embedding_dim=512):
-        """
-        Appearance Branch z architekturą Inception.
-        Dostosowana do VC-Clothes (256 klas, embedding 512).
-        """
+
         super(AppearanceBranch, self).__init__()
 
         # --- Część wstępna (Stem) ---
@@ -75,12 +73,12 @@ class AppearanceBranch(nn.Module):
         self.conv3 = BasicConv2d(64, 192, kernel_size=3, padding=1)
         self.maxpool2 = nn.MaxPool2d(3, stride=2, ceil_mode=True)
 
-        # --- Bloki Inception (3a, 3b) ---
+        # Bloki Inception (3a, 3b)
         self.inception3a = InceptionModule(192, 64, 96, 128, 16, 32, 32)
         self.inception3b = InceptionModule(256, 128, 128, 192, 32, 96, 64)
         self.maxpool3 = nn.MaxPool2d(3, stride=2, ceil_mode=True)
 
-        # --- Bloki Inception (4a - 4e) ---
+        # Bloki Inception (4a - 4e)
         self.inception4a = InceptionModule(480, 192, 96, 208, 16, 48, 64)
         self.inception4b = InceptionModule(512, 160, 112, 224, 24, 64, 64)
         self.inception4c = InceptionModule(512, 128, 128, 256, 24, 64, 64)
@@ -88,20 +86,19 @@ class AppearanceBranch(nn.Module):
         self.inception4e = InceptionModule(528, 256, 160, 320, 32, 128, 128)
         self.maxpool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
 
-        # --- Bloki Inception (5a, 5b) ---
+        # Bloki Inception (5a, 5b)
         self.inception5a = InceptionModule(832, 256, 160, 320, 32, 128, 128)
         self.inception5b = InceptionModule(832, 384, 192, 384, 48, 128, 128)
 
-        # --- Warstwa globalnego poolingu ---
+        # Warstwa globalnego poolingu
         # Wyjście z Inception 5b ma 1024 kanały
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # --- Embedding Head (Redukcja do 512, zgodnie z Fig. 7 artykułu) ---
-        # 1024 (wyjście z Inception) -> 512
+        # Embedding Head (Redukcja do embedding_dim)
         self.bottleneck = nn.Sequential(
             nn.Linear(1024, embedding_dim),
             nn.BatchNorm1d(embedding_dim),
-            nn.ReLU(),  # Opcjonalnie, w zależności od tego, czy embedding ma być przed czy po aktywacji
+            nn.ReLU(),
         )
 
         # Inicjalizacja wag
@@ -151,10 +148,10 @@ class AppearanceBranch(nn.Module):
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
 
-        # Bottleneck (Embedding)
+        # Embedding
         embedding = self.bottleneck(x)
 
-        # Normalizacja (kluczowa dla ReID)
+        # Normalizacja
         embedding_norm = F.normalize(embedding, p=2, dim=1)
 
         return embedding_norm

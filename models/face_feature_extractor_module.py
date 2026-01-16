@@ -1,11 +1,9 @@
-# model_lightning.py
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from torch.optim import Adam
-import torchmetrics
 
-from face_feature_extractor import FaceFeatureExtractor
+from models.face_feature_extractor import FaceFeatureExtractor
 
 
 class FaceReIDModule(pl.LightningModule):

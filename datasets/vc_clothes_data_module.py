@@ -1,12 +1,24 @@
+import torch
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from torchvision import transforms
-import torch
 
-from vc_clothes_dataset_w_faces import VCClothesDatasetFaces, build_transforms
+from datasets.vc_clothes_dataset import VCClothesDatasetFaces
 
 
 class VCClothesDataModule(pl.LightningDataModule):
+    """
+    Data Module dla treningu i testowania.
+
+    Folder z danymi traing jest dzielony na zbiór treningowy i walodacyjny,
+    folder z danymi query i gallery służy do testowania
+
+    Args:
+        root_dir (string)       : Ścieżka do folderu z danymi.
+        batch_size (int)        : Rozmiar batcha.
+        num_workers (int)       : Liczba procesów do obsługi datasetu.
+        val_split (float)       : Stosunek podziału zbioru testowego na walidacyjny.
+    """
+
     def __init__(self, root_dir, batch_size=32, num_workers=0, val_split: float = 0.1):
         super().__init__()
         self.root_dir = root_dir

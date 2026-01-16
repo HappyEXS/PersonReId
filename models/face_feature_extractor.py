@@ -1,9 +1,13 @@
-import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import models
 
 
 class FaceFeatureExtractor(nn.Module):
+    """
+    Face Feature Extractor z architekturą ResNet.
+    """
+
     def __init__(self, embedding_dim=512):
         super(FaceFeatureExtractor, self).__init__()
 
@@ -23,10 +27,13 @@ class FaceFeatureExtractor(nn.Module):
     def forward(self, x):
         self.backbone.eval()
 
+        # Backbone
         features = self.backbone(x)
 
+        # Embedding
         embedding = self.custom_head(features)
 
-        embedding_norm = torch.nn.functional.normalize(embedding, p=2, dim=1)
+        # Normalizacja
+        embedding_norm = F.normalize(embedding, p=2, dim=1)
 
         return embedding_norm

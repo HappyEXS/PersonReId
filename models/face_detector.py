@@ -1,4 +1,3 @@
-import torch
 from facenet_pytorch import MTCNN
 from torchvision import transforms
 from PIL import Image
@@ -12,7 +11,6 @@ class FaceDetector:
 
         self.mtcnn = MTCNN(keep_all=False, device=device)
 
-        # Parametry z artykułu
         self.expansion_pixels = 15
         self.target_size = (50, 50)
 
