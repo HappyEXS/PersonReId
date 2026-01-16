@@ -76,4 +76,4 @@ def get_test_metricies(csv_path="metrics.csv"):
     cols_of_interest = ["test_mAP", "test_Rank1", "test_Rank5", "test_Rank10"]
     test_metricies = test_results[cols_of_interest]
 
-    return test_metricies
+    return list(test_metricies.values[0])

@@ -33,10 +33,9 @@ class FusionModule(pl.LightningModule):
         # img, pid, camid, clothes_id, face
         body_img, pids, _, _, face_img = batch
 
-        embedding = self.model(body_img, face_img)
+        logits = self.model(body_img, face_img)
 
-        # Dla treningu embedingi przepuszczamy przez warstę klasyfikującą
-        logits = self.model.classifier(embedding)
+        # Dla treningu embedingi są klasyfikowane w modelu
         loss = self.criterion(logits, pids)
 
         preds = torch.argmax(logits, dim=1)
